@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2947",
+  "timestamp": "2026-07-08T16:12:03Z",
+  "rule_id": "DOS-HULK-01",
+  "alert_type": "dos_traffic_flood",
+  "source_ip": "203.0.113.41",
+  "dest_ip": "10.0.5.40",
+  "raw_log": "38,402 HTTP GET requests to '/index.php' in 45s from a single source, randomized query strings",
+  "asset_tag": null,
+  "protocol": "TCP",
+  "port": 80
+}

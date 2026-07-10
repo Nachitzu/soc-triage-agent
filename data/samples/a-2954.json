@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2954",
+  "timestamp": "2026-07-08T18:40:12Z",
+  "rule_id": "EXFIL-01",
+  "alert_type": "large_outbound_transfer",
+  "source_ip": "10.0.2.11",
+  "dest_ip": "203.0.113.77",
+  "raw_log": "8.4GB transferred over 41min from database server to an external host, single TLS session, no prior communication with this destination",
+  "asset_tag": "database_server",
+  "protocol": "TCP",
+  "port": 443
+}

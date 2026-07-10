@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2948",
+  "timestamp": "2026-07-08T15:47:19Z",
+  "rule_id": "WEB-SQLI-01",
+  "alert_type": "web_attack_sql_injection",
+  "source_ip": "203.0.113.41",
+  "dest_ip": "10.0.5.40",
+  "raw_log": "HTTP GET /search?q=1'%20UNION%20SELECT%20username,password%20FROM%20users-- returned 200 with 14KB body",
+  "asset_tag": null,
+  "protocol": "TCP",
+  "port": 443
+}

@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2950",
+  "timestamp": "2026-07-08T15:55:08Z",
+  "rule_id": "WEB-XSS-01",
+  "alert_type": "web_attack_xss",
+  "source_ip": "198.51.100.77",
+  "dest_ip": "10.0.5.40",
+  "raw_log": "HTTP POST /comment body contained '<script>document.location=...</script>', WAF returned 403",
+  "asset_tag": null,
+  "protocol": "TCP",
+  "port": 443
+}

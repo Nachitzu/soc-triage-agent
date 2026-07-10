@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2944",
+  "timestamp": "2026-07-08T03:30:02Z",
+  "rule_id": "SCAN-01",
+  "alert_type": "port_scan_detected",
+  "source_ip": "10.0.9.15",
+  "dest_ip": "10.0.5.22",
+  "raw_log": "Credentialed vulnerability scan, 4096 ports enumerated in 210s, scanner user-agent 'Nessus/10.7'",
+  "asset_tag": null,
+  "protocol": "TCP",
+  "port": null
+}

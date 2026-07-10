@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2942",
+  "timestamp": "2026-07-08T05:40:00Z",
+  "rule_id": "FTP-BRUTE-01",
+  "alert_type": "authentication_failure_burst",
+  "source_ip": "45.83.64.7",
+  "dest_ip": "10.0.5.30",
+  "raw_log": "212 failed FTP logins across 14 usernames in 300s, no successful authentication",
+  "asset_tag": null,
+  "protocol": "TCP",
+  "port": 21
+}

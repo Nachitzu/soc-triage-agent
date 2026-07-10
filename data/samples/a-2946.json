@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2946",
+  "timestamp": "2026-07-08T19:00:30Z",
+  "rule_id": "DDOS-01",
+  "alert_type": "distributed_dos_flood",
+  "source_ip": "198.51.100.23",
+  "dest_ip": "10.0.7.1",
+  "raw_log": "1.2M SYN packets from 4,318 distinct source IPs in 60s, VPN gateway response latency above 8s",
+  "asset_tag": "vpn_gateway",
+  "protocol": "TCP",
+  "port": 443
+}

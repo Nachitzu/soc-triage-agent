@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2953",
+  "timestamp": "2026-07-08T06:30:00Z",
+  "rule_id": "NET-BULK-01",
+  "alert_type": "large_outbound_transfer",
+  "source_ip": "10.0.6.20",
+  "dest_ip": "10.0.8.5",
+  "raw_log": "412GB transferred to backup target 10.0.8.5 over 96min, matches nightly job 'veeam-full-02'",
+  "asset_tag": null,
+  "protocol": "TCP",
+  "port": 10001
+}

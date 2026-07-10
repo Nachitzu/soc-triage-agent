@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2952",
+  "timestamp": "2026-07-08T07:33:21Z",
+  "rule_id": "BOT-C2-01",
+  "alert_type": "c2_beacon_suspected",
+  "source_ip": "10.0.3.44",
+  "dest_ip": "91.219.236.18",
+  "raw_log": "Outbound TLS to 91.219.236.18:443 every 302s (+/- 4s) for 6 hours, 1.4KB per connection, JA3 fingerprint not seen elsewhere in the estate",
+  "asset_tag": null,
+  "protocol": "TCP",
+  "port": 443
+}

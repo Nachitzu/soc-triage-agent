@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2943",
+  "timestamp": "2026-07-08T18:20:11Z",
+  "rule_id": "SCAN-01",
+  "alert_type": "port_scan_detected",
+  "source_ip": "45.83.64.7",
+  "dest_ip": "10.0.5.20",
+  "raw_log": "SYN packets to 1024 distinct ports in 38s, 3 ports responded (22, 80, 443)",
+  "asset_tag": null,
+  "protocol": "TCP",
+  "port": null
+}

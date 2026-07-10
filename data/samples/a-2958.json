@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2958",
+  "timestamp": "2026-07-08T07:41:09Z",
+  "rule_id": "LATERAL-01",
+  "alert_type": "suspicious_internal_transfer",
+  "source_ip": "10.0.3.44",
+  "dest_ip": "10.0.1.12",
+  "raw_log": "SMB session from workstation 10.0.3.44 to domain controller ADMIN$ share, followed by remote service creation 'MSSEC-4471'",
+  "asset_tag": "domain_controller",
+  "protocol": "TCP",
+  "port": 445
+}

@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2957",
+  "timestamp": "2026-07-08T09:15:00Z",
+  "rule_id": "UNKNOWN-00",
+  "alert_type": "uncategorized",
+  "source_ip": "10.0.6.44",
+  "dest_ip": "10.0.5.40",
+  "raw_log": "connection reset by peer; log line truncated at collector",
+  "asset_tag": null,
+  "protocol": null,
+  "port": null
+}

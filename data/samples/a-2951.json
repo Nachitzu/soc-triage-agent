@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2951",
+  "timestamp": "2026-07-08T13:04:55Z",
+  "rule_id": "HEARTBLEED-01",
+  "alert_type": "vulnerability_exploit_attempt",
+  "source_ip": "203.0.113.41",
+  "dest_ip": "10.0.2.11",
+  "raw_log": "TLS heartbeat request with payload_length=65535 and 1-byte payload, 64KB returned by server",
+  "asset_tag": "database_server",
+  "protocol": "TCP",
+  "port": 443
+}

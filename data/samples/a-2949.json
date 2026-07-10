@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2949",
+  "timestamp": "2026-07-08T15:52:40Z",
+  "rule_id": "WEB-SQLI-01",
+  "alert_type": "web_attack_sql_injection",
+  "source_ip": "203.0.113.41",
+  "dest_ip": "10.0.6.11",
+  "raw_log": "SQL injection signature matched on TCP/22 payload; host 10.0.6.11 runs sshd only, no HTTP listener. Connection reset by peer.",
+  "asset_tag": null,
+  "protocol": "TCP",
+  "port": 22
+}

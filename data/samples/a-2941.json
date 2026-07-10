@@ -1,0 +1,12 @@
+{
+  "alert_id": "a-2941",
+  "timestamp": "2026-07-08T03:12:44Z",
+  "rule_id": "SSH-BRUTE-01",
+  "alert_type": "authentication_failure_burst",
+  "source_ip": "185.220.101.34",
+  "dest_ip": "10.0.1.12",
+  "raw_log": "47 failed SSH logins for user 'admin' in 120s, followed by 1 successful login",
+  "asset_tag": "domain_controller",
+  "protocol": "TCP",
+  "port": 22
+}
