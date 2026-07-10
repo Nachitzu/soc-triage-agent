@@ -7,8 +7,8 @@
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
   <img alt="Pydantic" src="https://img.shields.io/badge/validation-pydantic%20v2-E92063">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-107%20passing-2EA043">
-  <img alt="Coverage" src="https://img.shields.io/badge/coverage-90%25-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-158%20passing-2EA043">
+  <img alt="Coverage" src="https://img.shields.io/badge/coverage-87%25-2EA043">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
@@ -32,10 +32,10 @@ This project automates that loop. It ingests SIEM alerts, classifies severity, e
 |-------|-------|-------|
 | 1 | Schemas, dataset parser, curated samples | ✅ Complete |
 | 2 | Core agent, validation loop, CLI, batch mode | ✅ Complete |
-| 3 | Enrichment tools (IP reputation, alert history) | ⏳ Planned |
-| 4 | Evaluation against labeled ground truth | ⏳ Planned |
+| 3 | Enrichment tools (IP reputation, alert history) | ✅ Complete |
+| 4 | Evaluation harness against labeled ground truth | ✅ Complete |
 
-107 unit tests, 90% statement coverage on `src/`. No test reaches a live API.
+158 unit tests, 87% statement coverage on `src/`. No test reaches a live API.
 
 ---
 
@@ -163,23 +163,26 @@ ai-soc-triage-agent/
 │   │   ├── cicids_parser.py       ← CICIDS2017 CSV → NormalizedAlert (both layouts)
 │   │   └── normalizer.py          ← generic normalization utilities
 │   ├── agent/
-│   │   ├── triage_agent.py        ← agent loop, validation retry, CLI, batch mode
-│   │   ├── tools.py               ← lookup_ip_reputation, check_alert_history   (Phase 3)
+│   │   ├── triage_agent.py        ← agent loop, tool use, validation retry, batch mode
+│   │   ├── tools.py               ← lookup_ip_reputation, check_alert_history, SQLite store
 │   │   └── prompts/
 │   │       └── SYSTEM_PROMPT.md   ← the agent's system prompt
 │   ├── schemas/
 │   │   ├── normalized_alert.py    ← input contract
 │   │   └── triage_output.py       ← output contract, strictly validated
 │   └── evaluation/
-│       └── evaluate.py            ← accuracy metrics vs CICIDS2017 labels       (Phase 4)
+│       └── evaluate.py            ← accuracy metrics vs CICIDS2017 labels
+├── docs/
+│   └── architecture.md            ← pipeline diagram and design boundaries
 ├── data/
 │   └── samples/                   ← 18 curated alerts + ground-truth labels.json
 │                                     the full dataset is git-ignored
 └── tests/
     ├── test_schemas.py
     ├── test_parser.py
-    ├── test_agent.py              ← mocked model responses
-    └── test_tools.py              ← mocked API calls                            (Phase 3)
+    ├── test_agent.py              ← mocked model responses + tool-use loop
+    ├── test_tools.py              ← mocked HTTP + in-memory SQLite
+    └── test_evaluate.py           ← offline metric scoring
 ```
 
 ---
@@ -289,19 +292,19 @@ CICIDS2017 rows are *flow records*, not SIEM alerts. A flow says "host A sent 47
 - [x] Batch mode: triage a directory of alerts, write results to `results/*.json`
 
 ### Phase 3 — Enrichment tools
-- [ ] `lookup_ip_reputation`: AbuseIPDB free tier via `httpx`, with local caching to stay inside rate limits
-- [ ] `check_alert_history`: SQLite store of past firings, queried by `rule_id` + `source_ip`
-- [ ] Wire both into the agent via tool use; the agent decides when to call them
-- [ ] Mocked tests for each tool and for the tool-calling loop
+- [x] `lookup_ip_reputation`: AbuseIPDB free tier via `httpx`, with local SQLite caching to stay inside rate limits
+- [x] `check_alert_history`: SQLite store of past firings, queried by `rule_id` + `source_ip`
+- [x] Wire both into the agent via tool use; the agent decides when to call them
+- [x] Mocked tests for each tool and for the tool-calling loop
 
 ### Phase 4 — Evaluation
-- [ ] `evaluate.py`: run the agent over N labeled alerts and compute
+- [x] `evaluate.py`: score the agent over N labeled alerts and compute
   - severity accuracy (exact match, and with ±1 adjacent-severity tolerance)
   - false-positive detection precision and recall
   - escalation safety: share of true attacks *not* recommended for closure
-- [ ] Publish the results table below with real numbers
-- [ ] `docs/architecture.md` with the final diagram
-- [ ] "Limitations & Future Work": non-determinism, cost at scale, prompt-injection surface, dataset ≠ production alerts
+- [x] `docs/architecture.md` with the final diagram
+- [x] "Limitations & future work": non-determinism, cost at scale, prompt-injection surface, dataset ≠ production alerts
+- [ ] Publish the results table below with real numbers — pending a live run (see [Results](#results))
 
 ### Beyond v1
 - FastAPI service and a simple dashboard
@@ -321,6 +324,72 @@ CICIDS2017 rows are *flow records*, not SIEM alerts. A flow says "host A sent 47
 | Unit test coverage on `src/` | ≥ 80% |
 
 Escalation safety is non-negotiable. A triage agent that closes real attacks is worse than no agent at all.
+
+---
+
+## Results
+
+The evaluation harness scores agent output against the ground truth in
+`labels.json`. Scoring is a pure function — agent outputs, labels, and the list
+of alerts that failed to validate go in; a report comes out — so the metric
+logic is covered by tests without touching an API.
+
+Two ways to run it:
+
+```bash
+# Offline: score result files a batch run already produced.
+python -m src.evaluation.evaluate --results results
+
+# Live: triage the sample set, then score it (needs ANTHROPIC_API_KEY).
+python -m src.evaluation.evaluate --run --alerts data/samples
+```
+
+The command prints each metric against its target and, most importantly, names
+any real attack that was closed as a false positive — the one failure that makes
+the run exit non-zero.
+
+**Headline numbers are pending a live run.** They depend on the model's actual
+responses over the sample set, so publishing them here without having run the
+agent against a live endpoint would be fabricating them. The table below is
+filled in from a real `--run` on the 18 curated samples; until then it shows the
+targets the harness checks against.
+
+| Metric | Target | Measured |
+|--------|--------|----------|
+| Severity accuracy (exact) | ≥ 80% | _pending live run_ |
+| Severity accuracy (±1 level) | ≥ 95% | _pending live run_ |
+| False-positive precision / recall | — | _pending live run_ |
+| Escalation safety | 100% | _pending live run_ |
+| Schema validation pass rate | ≥ 99% | _pending live run_ |
+
+Note the caveat from [the dataset section](#two-distributions--the-parser-reads-both):
+scored on the identifier-less `MachineLearningCVE` layout, these numbers are a
+lower bound. The 18 curated samples in `data/samples/` carry full network
+context and are the fair test of the designed system.
+
+---
+
+## Limitations & future work
+
+- **LLM non-determinism.** The same alert can triage slightly differently across
+  runs. The schema and escalation rules bound the *shape* and *safety* of the
+  output, not its exact wording or borderline severity calls. Treat a single run
+  as one analyst's opinion, not a fixed verdict.
+- **Cost at scale.** Every alert is at least one model call, more when the agent
+  reaches for tools. Batch mode can select the cheaper model via `TRIAGE_MODEL`
+  and cap a run with `--max-alerts`, but triaging a real SIEM's daily volume
+  through a frontier model is a real budget line.
+- **Prompt-injection surface.** The `<alert>` boundary and the evidence-discipline
+  rules reduce the risk, and one adversarial sample exercises it, but a
+  determined injection embedded in attacker-controlled log content remains an
+  open threat that evaluation can measure but not eliminate.
+- **Dataset ≠ production alerts.** CICIDS2017 flows are converted into synthetic
+  SIEM alerts; the `raw_log` carries flow evidence, not the usernames, process
+  trees, or command lines a real SIEM would. Accuracy here is indicative, not a
+  promise about a production deployment.
+- **Enrichment coverage.** `check_alert_history` only knows firings this
+  deployment has recorded, and `lookup_ip_reputation` needs a public IP and an
+  AbuseIPDB key — neither applies to the identifier-less dataset layout.
 
 ---
 
