@@ -113,8 +113,8 @@ pytest --cov=src
 │  Structured output   │   Strict JSON, validated with Pydantic
 └──────────┬───────────┘
            │
-     ┌─────┼──────────────────┐
-     ▼     ▼                  ▼
+     ┌─────────────┬──────────┐
+     ▼             ▼          ▼
 ┌──────────┐ ┌─────────────┐ ┌──────────────────┐
 │ Severity │ │   False     │ │  Human-readable  │
 │ CRITICAL │ │  positive   │ │     summary      │
