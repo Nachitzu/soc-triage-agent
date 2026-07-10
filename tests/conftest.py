@@ -23,6 +23,15 @@ VALID_TRIAGE = {
 }
 
 
+@dataclass
+class ToolUse:
+    """A scripted tool_use response for FakeClient to emit."""
+
+    name: str
+    input: dict[str, Any]
+    id: str = "toolu_1"
+
+
 class _FakeMessages:
     def __init__(self, parent: "FakeClient") -> None:
         self._parent = parent
@@ -31,25 +40,55 @@ class _FakeMessages:
         self._parent.calls.append(kwargs)
         if not self._parent.responses:
             raise AssertionError("FakeClient ran out of scripted responses")
-        text = self._parent.responses.pop(0)
+        item = self._parent.responses.pop(0)
+
+        if isinstance(item, ToolUse):
+            block = SimpleNamespace(
+                type="tool_use", id=item.id, name=item.name, input=item.input
+            )
+            return SimpleNamespace(content=[block], stop_reason="tool_use")
+
         # Mirror the real shape: adaptive thinking puts a thinking block first.
         blocks: list[SimpleNamespace] = []
         if self._parent.with_thinking:
             blocks.append(SimpleNamespace(type="thinking", thinking="..."))
-        blocks.append(SimpleNamespace(type="text", text=text))
+        blocks.append(SimpleNamespace(type="text", text=item))
         return SimpleNamespace(content=blocks, stop_reason="end_turn")
 
 
 @dataclass
 class FakeClient:
-    """Stands in for `anthropic.Anthropic`, replaying scripted responses."""
+    """Stands in for `anthropic.Anthropic`, replaying scripted responses.
 
-    responses: list[str]
+    Each item in `responses` is either a `str` (a text reply that ends the turn)
+    or a `ToolUse` (a tool call the agent must resolve before continuing).
+    """
+
+    responses: list[Any]
     with_thinking: bool = False
     calls: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.messages = _FakeMessages(self)
+
+
+@dataclass
+class FakeToolbox:
+    """A stand-in Toolbox that records dispatch calls and returns a canned result."""
+
+    result: str = '{"status": "ok"}'
+    is_error: bool = False
+    definitions: list[dict[str, Any]] = field(
+        default_factory=lambda: [
+            {"name": "lookup_ip_reputation", "input_schema": {}},
+            {"name": "check_alert_history", "input_schema": {}},
+        ]
+    )
+    calls: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
+
+    def dispatch(self, name: str, tool_input: dict[str, Any]) -> tuple[str, bool]:
+        self.calls.append((name, tool_input))
+        return self.result, self.is_error
 
 
 @pytest.fixture

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import VALID_TRIAGE, FakeClient
+from conftest import VALID_TRIAGE, FakeClient, FakeToolbox, ToolUse
 
 from src.agent.triage_agent import (
     TriageError,
@@ -322,3 +322,121 @@ class TestBatchMode:
 
         assert summary.total == 1
         assert len(client.calls) == 1
+
+
+class TestToolUseLoop:
+    def test_tools_are_offered_when_a_toolbox_is_present(
+        self, alert: NormalizedAlert, valid_triage_json: str
+    ) -> None:
+        client = FakeClient([valid_triage_json])
+        toolbox = FakeToolbox()
+
+        triage_alert(alert, client=client, toolbox=toolbox)
+
+        assert client.calls[0]["tools"] == toolbox.definitions
+
+    def test_no_tools_key_without_a_toolbox(
+        self, alert: NormalizedAlert, valid_triage_json: str
+    ) -> None:
+        client = FakeClient([valid_triage_json])
+
+        triage_alert(alert, client=client)
+
+        assert "tools" not in client.calls[0]
+
+    def test_a_tool_call_is_dispatched_and_fed_back(
+        self, alert: NormalizedAlert, valid_triage_json: str
+    ) -> None:
+        client = FakeClient(
+            [
+                ToolUse("lookup_ip_reputation", {"ip": "185.220.101.34"}),
+                valid_triage_json,
+            ]
+        )
+        toolbox = FakeToolbox(result='{"status": "ok", "abuse_confidence_score": 100}')
+
+        result = triage_alert(alert, client=client, toolbox=toolbox)
+
+        assert result.output.severity == "CRITICAL"
+        assert toolbox.calls == [("lookup_ip_reputation", {"ip": "185.220.101.34"})]
+        # Second model call carries the tool result back as a user turn.
+        second_messages = client.calls[1]["messages"]
+        assert second_messages[-1]["role"] == "user"
+        tool_result = second_messages[-1]["content"][0]
+        assert tool_result["type"] == "tool_result"
+        assert tool_result["tool_use_id"] == "toolu_1"
+        assert "abuse_confidence_score" in tool_result["content"]
+
+    def test_multiple_sequential_tool_calls(
+        self, alert: NormalizedAlert, valid_triage_json: str
+    ) -> None:
+        client = FakeClient(
+            [
+                ToolUse("check_alert_history", {"rule_id": "SSH-BRUTE-01", "source_ip": "185.220.101.34"}, id="t1"),
+                ToolUse("lookup_ip_reputation", {"ip": "185.220.101.34"}, id="t2"),
+                valid_triage_json,
+            ]
+        )
+        toolbox = FakeToolbox()
+
+        triage_alert(alert, client=client, toolbox=toolbox)
+
+        assert [name for name, _ in toolbox.calls] == [
+            "check_alert_history",
+            "lookup_ip_reputation",
+        ]
+        assert len(client.calls) == 3
+
+    def test_tool_error_flag_is_propagated(
+        self, alert: NormalizedAlert, valid_triage_json: str
+    ) -> None:
+        client = FakeClient(
+            [ToolUse("lookup_ip_reputation", {"ip": "bogus"}), valid_triage_json]
+        )
+        toolbox = FakeToolbox(result='{"error": "bad ip"}', is_error=True)
+
+        triage_alert(alert, client=client, toolbox=toolbox)
+
+        tool_result = client.calls[1]["messages"][-1]["content"][0]
+        assert tool_result["is_error"] is True
+
+    def test_runaway_tool_loop_is_capped(self, alert: NormalizedAlert) -> None:
+        # The model keeps asking for tools and never answers.
+        client = FakeClient([ToolUse("check_alert_history", {}) for _ in range(20)])
+        toolbox = FakeToolbox()
+
+        with pytest.raises(TriageError, match="tool-call loop exceeded"):
+            triage_alert(alert, client=client, toolbox=toolbox, max_tool_iterations=3)
+
+    def test_batch_records_firings_across_the_run(self, tmp_path: Path) -> None:
+        from datetime import datetime, timezone
+
+        from src.agent.tools import Toolbox, TriageStore
+
+        alerts = tmp_path / "alerts"
+        alerts.mkdir()
+        payload = {
+            "alert_id": "a-1",
+            "rule_id": "SSH-BRUTE-01",
+            "alert_type": "authentication_failure_burst",
+            "source_ip": "185.220.101.34",
+            "raw_log": "47 failed SSH logins",
+            "timestamp": "2026-07-08T03:12:44Z",
+            "port": 22,
+        }
+        (alerts / "a-1.json").write_text(json.dumps(payload))
+
+        store = TriageStore(":memory:")
+        toolbox = Toolbox(store=store, now_fn=lambda: datetime(2026, 7, 10, tzinfo=timezone.utc))
+        client = FakeClient([_triage_json(alert_id="a-1")])
+
+        triage_directory(alerts, tmp_path / "results", client=client, toolbox=toolbox)
+
+        history = store.query_history(
+            "SSH-BRUTE-01",
+            "185.220.101.34",
+            now=datetime(2026, 7, 10, tzinfo=timezone.utc),
+        )
+        assert history.total_firings == 1
+        assert history.escalated_firings == 1  # the sample triages to block_and_escalate
+        store.close()
