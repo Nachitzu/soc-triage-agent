@@ -33,12 +33,14 @@ import os
 import re
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import anthropic
 from pydantic import ValidationError
 
+from src.agent.tools import Toolbox, build_toolbox
 from src.schemas.normalized_alert import NormalizedAlert
 from src.schemas.triage_output import TriageOutput
 
@@ -46,6 +48,7 @@ PROMPT_PATH = Path(__file__).parent / "prompts" / "SYSTEM_PROMPT.md"
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 DEFAULT_MAX_TOKENS = 8000
+DEFAULT_MAX_TOOL_ITERATIONS = 6
 
 # Models that accept `thinking={"type": "adaptive"}`. claude-haiku-4-5 rejects it
 # (and rejects `output_config.effort`), which is why TRIAGE_THINKING defaults to
@@ -229,6 +232,62 @@ def _validate(raw_text: str, alert: NormalizedAlert) -> TriageOutput:
 
 
 # --------------------------------------------------------------------------
+# Tool-use loop
+# --------------------------------------------------------------------------
+
+
+def _resolve_tool_calls(response: Any, toolbox: Toolbox) -> list[dict[str, Any]]:
+    """Run every tool the model asked for and package the results.
+
+    All results for one assistant turn go back in a single user message, so the
+    model does not learn to stop making parallel tool calls.
+    """
+    results: list[dict[str, Any]] = []
+    for block in response.content:
+        if getattr(block, "type", None) == "tool_use":
+            content, is_error = toolbox.dispatch(block.name, dict(block.input or {}))
+            results.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": content,
+                    "is_error": is_error,
+                }
+            )
+    if not results:
+        raise TriageError(
+            "model set stop_reason=tool_use but produced no tool_use blocks"
+        )
+    return results
+
+
+def _run_completion(
+    client: Any,
+    request: dict[str, Any],
+    messages: list[dict[str, Any]],
+    toolbox: Toolbox | None,
+    max_tool_iterations: int,
+) -> Any:
+    """Drive one model turn to a text answer, resolving tool calls in between.
+
+    `messages` is extended in place with the assistant tool-use turns and the
+    tool results, so a later validation retry sees the full exchange.
+    """
+    response = client.messages.create(messages=messages, **request)
+    iterations = 0
+    while getattr(response, "stop_reason", None) == "tool_use" and toolbox is not None:
+        if iterations >= max_tool_iterations:
+            raise TriageError(
+                f"tool-call loop exceeded {max_tool_iterations} iterations"
+            )
+        iterations += 1
+        messages.append({"role": "assistant", "content": response.content})
+        messages.append({"role": "user", "content": _resolve_tool_calls(response, toolbox)})
+        response = client.messages.create(messages=messages, **request)
+    return response
+
+
+# --------------------------------------------------------------------------
 # The agent loop
 # --------------------------------------------------------------------------
 
@@ -239,10 +298,16 @@ def triage_alert(
     client: Any | None = None,
     model: str | None = None,
     system_prompt: str | None = None,
+    toolbox: Toolbox | None = None,
     max_tokens: int = DEFAULT_MAX_TOKENS,
     max_retries: int = 1,
+    max_tool_iterations: int = DEFAULT_MAX_TOOL_ITERATIONS,
 ) -> TriageResult:
-    """Triage a single alert, retrying once on a validation failure."""
+    """Triage a single alert, retrying once on a validation failure.
+
+    When `toolbox` is given, the model may call enrichment tools before it
+    answers; the tool exchange happens inside each attempt.
+    """
     client = client or anthropic.Anthropic()
     model = resolve_model(model)
     system_prompt = system_prompt or load_system_prompt()
@@ -257,12 +322,16 @@ def triage_alert(
     }
     if (thinking := thinking_param(model)) is not None:
         request["thinking"] = thinking
+    if toolbox is not None:
+        request["tools"] = toolbox.definitions
 
     raw_responses: list[str] = []
     last_error = ""
 
     for attempt in range(max_retries + 1):
-        response = client.messages.create(messages=messages, **request)
+        response = _run_completion(
+            client, request, messages, toolbox, max_tool_iterations
+        )
         raw_text = _first_text_block(response)
         raw_responses.append(raw_text)
 
@@ -321,6 +390,7 @@ def triage_directory(
     *,
     client: Any | None = None,
     model: str | None = None,
+    toolbox: Toolbox | None = None,
     max_alerts: int | None = None,
     max_tokens: int = DEFAULT_MAX_TOKENS,
 ) -> BatchSummary:
@@ -329,6 +399,9 @@ def triage_directory(
     A failure on one alert does not abort the batch — it is recorded and the run
     continues, because a single unparseable response should not cost the other
     triages in a long run.
+
+    A single `toolbox` is shared across the run, so the SQLite history it writes
+    grows as alerts are triaged and later alerts can see earlier firings.
     """
     client = client or anthropic.Anthropic()
     system_prompt = load_system_prompt()
@@ -346,6 +419,7 @@ def triage_directory(
                 client=client,
                 model=model,
                 system_prompt=system_prompt,
+                toolbox=toolbox,
                 max_tokens=max_tokens,
             )
         except TriageError as exc:
@@ -359,6 +433,13 @@ def triage_directory(
         if result.attempts > 1:
             summary.retried.append(alert.alert_id)
         summary.succeeded.append(alert.alert_id)
+        if toolbox is not None:
+            toolbox.record_triage(
+                alert.rule_id,
+                alert.source_ip,
+                alert.timestamp or datetime.now(timezone.utc),
+                result.output.recommended_action,
+            )
         (out_path / f"{alert.alert_id}.json").write_text(
             result.output.model_dump_json(indent=2) + "\n"
         )
@@ -395,6 +476,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-alerts", type=int, help="cap the number of alerts triaged in batch mode"
     )
+    parser.add_argument(
+        "--no-enrichment",
+        action="store_true",
+        help="disable the lookup_ip_reputation and check_alert_history tools",
+    )
     return parser
 
 
@@ -412,18 +498,30 @@ def main(argv: list[str] | None = None) -> int:
         print("ANTHROPIC_API_KEY is not set (see .env.example)", file=sys.stderr)
         return 2
 
-    if args.alert:
-        try:
-            result = triage_alert(load_alert(args.alert), model=args.model)
-        except TriageError as exc:
-            print(f"triage failed: {exc}", file=sys.stderr)
-            return 1
-        print(result.output.model_dump_json(indent=2))
-        return 0
+    toolbox = None if args.no_enrichment else build_toolbox()
+    try:
+        if args.alert:
+            try:
+                result = triage_alert(
+                    load_alert(args.alert), model=args.model, toolbox=toolbox
+                )
+            except TriageError as exc:
+                print(f"triage failed: {exc}", file=sys.stderr)
+                return 1
+            print(result.output.model_dump_json(indent=2))
+            return 0
 
-    summary = triage_directory(
-        args.batch, args.out, model=args.model, max_alerts=args.max_alerts
-    )
+        summary = triage_directory(
+            args.batch,
+            args.out,
+            model=args.model,
+            toolbox=toolbox,
+            max_alerts=args.max_alerts,
+        )
+    finally:
+        if toolbox is not None:
+            toolbox.close()
+
     print(
         f"triaged {len(summary.succeeded)}/{summary.total} alerts "
         f"({len(summary.retried)} needed a retry) -> {args.out}",

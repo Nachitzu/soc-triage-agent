@@ -8,6 +8,9 @@ dataset/
 # Agent outputs
 results/
 
+# Local SQLite store (alert history + IP reputation cache)
+*.db
+
 # Python
 __pycache__/
 *.py[cod]
