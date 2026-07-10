@@ -1,0 +1,22 @@
+# Secrets
+.env
+
+# Full CICIDS2017 dataset (GB scale) — only data/samples/ is committed
+data/raw/
+dataset/
+
+# Agent outputs
+results/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Notebooks
+.ipynb_checkpoints/
