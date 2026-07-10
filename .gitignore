@@ -20,3 +20,4 @@ htmlcov/
 
 # Notebooks
 .ipynb_checkpoints/
+/.claude
