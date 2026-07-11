@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
@@ -43,6 +44,8 @@ from pydantic import ValidationError
 from src.agent.tools import Toolbox, build_toolbox
 from src.schemas.normalized_alert import NormalizedAlert
 from src.schemas.triage_output import TriageOutput
+
+logger = logging.getLogger(__name__)
 
 PROMPT_PATH = Path(__file__).parent / "prompts" / "SYSTEM_PROMPT.md"
 
@@ -174,6 +177,45 @@ def thinking_param(model: str, mode: str | None = None) -> dict[str, str] | None
     raise ValueError(f"TRIAGE_THINKING must be auto|adaptive|off, got {mode!r}")
 
 
+EFFORT_LEVELS = frozenset({"low", "medium", "high", "max"})
+
+
+def effort_param(model: str, level: str | None = None) -> dict[str, str] | None:
+    """Decide whether to send `output_config.effort` for this model.
+
+    Effort trades thinking depth (billed as output tokens) for cost. The API
+    default is "high"; TRIAGE_EFFORT=low|medium is the cheap knob for batch
+    runs that keeps adaptive thinking on. claude-haiku-4-5 rejects the
+    parameter, so it is only sent for models that accept adaptive thinking.
+    """
+    level = (level or os.environ.get("TRIAGE_EFFORT") or "").lower()
+    if not level or level == "default":
+        return None
+    if level not in EFFORT_LEVELS:
+        raise ValueError(f"TRIAGE_EFFORT must be low|medium|high|max, got {level!r}")
+    if model not in ADAPTIVE_THINKING_MODELS:
+        return None
+    return {"effort": level}
+
+
+def cacheable_system(system_prompt: str) -> list[dict[str, Any]]:
+    """Wrap the system prompt as a cache-controlled block.
+
+    Tools render before system, so this one breakpoint caches tool schemas and
+    the system prompt together: every alert after the first (and every
+    iteration of the tool loop) reads that prefix at ~0.1x the input price
+    instead of paying it in full. Below the model's minimum cacheable prefix
+    the marker is silently ignored, which costs nothing.
+    """
+    return [
+        {
+            "type": "text",
+            "text": system_prompt,
+            "cache_control": {"type": "ephemeral"},
+        }
+    ]
+
+
 # --------------------------------------------------------------------------
 # Response parsing
 # --------------------------------------------------------------------------
@@ -240,7 +282,10 @@ def _resolve_tool_calls(response: Any, toolbox: Toolbox) -> list[dict[str, Any]]
     """Run every tool the model asked for and package the results.
 
     All results for one assistant turn go back in a single user message, so the
-    model does not learn to stop making parallel tool calls.
+    model does not learn to stop making parallel tool calls. May return an
+    empty list: the API has been observed setting stop_reason=tool_use on a
+    turn whose content carries no tool_use block (ms-790273985660) — the caller
+    treats that as a normal end of turn instead of aborting the alert.
     """
     results: list[dict[str, Any]] = []
     for block in response.content:
@@ -254,10 +299,6 @@ def _resolve_tool_calls(response: Any, toolbox: Toolbox) -> list[dict[str, Any]]
                     "is_error": is_error,
                 }
             )
-    if not results:
-        raise TriageError(
-            "model set stop_reason=tool_use but produced no tool_use blocks"
-        )
     return results
 
 
@@ -281,8 +322,19 @@ def _run_completion(
                 f"tool-call loop exceeded {max_tool_iterations} iterations"
             )
         iterations += 1
+        tool_results = _resolve_tool_calls(response, toolbox)
+        if not tool_results:
+            # stop_reason=tool_use with no tool_use blocks. Log what actually
+            # arrived (the payload needed to investigate the API-side cause)
+            # and fall through to the normal text-parsing path, which fails
+            # loudly on its own if there is no text block either.
+            logger.warning(
+                "stop_reason=tool_use without tool_use blocks; content types=%s",
+                [getattr(block, "type", "?") for block in response.content],
+            )
+            break
         messages.append({"role": "assistant", "content": response.content})
-        messages.append({"role": "user", "content": _resolve_tool_calls(response, toolbox)})
+        messages.append({"role": "user", "content": tool_results})
         response = client.messages.create(messages=messages, **request)
     return response
 
@@ -318,10 +370,12 @@ def triage_alert(
     request: dict[str, Any] = {
         "model": model,
         "max_tokens": max_tokens,
-        "system": system_prompt,
+        "system": cacheable_system(system_prompt),
     }
     if (thinking := thinking_param(model)) is not None:
         request["thinking"] = thinking
+    if (effort := effort_param(model)) is not None:
+        request["output_config"] = effort
     if toolbox is not None:
         request["tools"] = toolbox.definitions
 
@@ -481,6 +535,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="disable the lookup_ip_reputation and check_alert_history tools",
     )
+    parser.add_argument(
+        "--no-report",
+        action="store_true",
+        help="skip generating the session HTML report after a batch run",
+    )
     return parser
 
 
@@ -529,6 +588,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     for alert_id, error in summary.failed.items():
         print(f"  FAILED {alert_id}: {error}", file=sys.stderr)
+
+    if not args.no_report:
+        from src.reporting.html_report import write_report
+
+        report_path = write_report(args.out, model=resolve_model(args.model))
+        print(f"session report -> {report_path}", file=sys.stderr)
+
     return 1 if summary.failed else 0
 
 

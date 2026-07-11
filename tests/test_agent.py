@@ -6,11 +6,12 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import VALID_TRIAGE, FakeClient, FakeToolbox, ToolUse
+from conftest import VALID_TRIAGE, FakeClient, FakeToolbox, PhantomToolUse, ToolUse
 
 from src.agent.triage_agent import (
     TriageError,
     build_user_message,
+    effort_param,
     extract_json_object,
     iter_alert_paths,
     load_system_prompt,
@@ -120,6 +121,39 @@ class TestThinkingParam:
             thinking_param("claude-sonnet-4-6", mode="deep")
 
 
+class TestEffortParam:
+    def test_unset_sends_nothing(self) -> None:
+        assert effort_param("claude-sonnet-4-6") is None
+
+    def test_env_var_sets_the_level(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("TRIAGE_EFFORT", "low")
+        assert effort_param("claude-sonnet-4-6") == {"effort": "low"}
+
+    def test_haiku_never_receives_effort(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """claude-haiku-4-5 rejects output_config.effort, so it is never sent."""
+        monkeypatch.setenv("TRIAGE_EFFORT", "low")
+        assert effort_param("claude-haiku-4-5") is None
+
+    def test_invalid_level_raises(self) -> None:
+        with pytest.raises(ValueError, match="low"):
+            effort_param("claude-sonnet-4-6", level="turbo")
+
+    def test_effort_reaches_the_request(
+        self,
+        alert: NormalizedAlert,
+        valid_triage_json: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("TRIAGE_EFFORT", "medium")
+        client = FakeClient([valid_triage_json])
+
+        triage_alert(alert, client=client, model="claude-sonnet-4-6")
+
+        assert client.calls[0]["output_config"] == {"effort": "medium"}
+
+
 class TestExtractJsonObject:
     def test_bare_object(self) -> None:
         assert extract_json_object('{"a": 1}') == {"a": 1}
@@ -160,7 +194,10 @@ class TestTriageAlert:
         triage_alert(alert, client=client, model="claude-sonnet-4-6")
 
         call = client.calls[0]
-        assert call["system"].startswith("You are a Tier 1 SOC")
+        # The system prompt travels as a cache-controlled block so the prefix
+        # (tools + system) is reused across alerts and tool-loop iterations.
+        assert call["system"][0]["text"].startswith("You are a Tier 1 SOC")
+        assert call["system"][0]["cache_control"] == {"type": "ephemeral"}
         assert call["thinking"] == {"type": "adaptive"}
         assert call["model"] == "claude-sonnet-4-6"
 
@@ -399,6 +436,33 @@ class TestToolUseLoop:
 
         tool_result = client.calls[1]["messages"][-1]["content"][0]
         assert tool_result["is_error"] is True
+
+    def test_phantom_tool_use_falls_back_to_the_text_answer(
+        self, alert: NormalizedAlert, valid_triage_json: str
+    ) -> None:
+        """stop_reason=tool_use with no tool_use blocks must not fail the alert.
+
+        Observed in the wild (ms-790273985660): the turn carried only thinking
+        and text. The agent now reads the text instead of raising TriageError.
+        """
+        client = FakeClient([PhantomToolUse(valid_triage_json)])
+        toolbox = FakeToolbox()
+
+        result = triage_alert(alert, client=client, toolbox=toolbox)
+
+        assert result.output.alert_id == "a-2941"
+        assert toolbox.calls == []  # nothing was dispatched
+        assert len(client.calls) == 1  # and no extra API call was made
+
+    def test_phantom_tool_use_without_text_still_fails_loudly(
+        self, alert: NormalizedAlert
+    ) -> None:
+        client = FakeClient([PhantomToolUse("")])
+        # An empty text block parses to no JSON object -> validation retry path.
+        client.responses.append(PhantomToolUse(""))
+
+        with pytest.raises(TriageError):
+            triage_alert(alert, client=client, toolbox=FakeToolbox())
 
     def test_runaway_tool_loop_is_capped(self, alert: NormalizedAlert) -> None:
         # The model keeps asking for tools and never answers.

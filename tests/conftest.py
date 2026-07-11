@@ -32,6 +32,18 @@ class ToolUse:
     id: str = "toolu_1"
 
 
+@dataclass
+class PhantomToolUse:
+    """A turn that claims stop_reason=tool_use but carries no tool_use block.
+
+    Reproduces the API behavior observed in the wild for ms-790273985660: the
+    content holds only thinking/text blocks, yet the stop reason still says
+    tool_use. `text` is what the turn actually contains.
+    """
+
+    text: str
+
+
 class _FakeMessages:
     def __init__(self, parent: "FakeClient") -> None:
         self._parent = parent
@@ -47,6 +59,13 @@ class _FakeMessages:
                 type="tool_use", id=item.id, name=item.name, input=item.input
             )
             return SimpleNamespace(content=[block], stop_reason="tool_use")
+
+        if isinstance(item, PhantomToolUse):
+            blocks = [
+                SimpleNamespace(type="thinking", thinking="..."),
+                SimpleNamespace(type="text", text=item.text),
+            ]
+            return SimpleNamespace(content=blocks, stop_reason="tool_use")
 
         # Mirror the real shape: adaptive thinking puts a thinking block first.
         blocks: list[SimpleNamespace] = []
@@ -131,3 +150,4 @@ def _no_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("TRIAGE_MODEL", raising=False)
     monkeypatch.delenv("TRIAGE_THINKING", raising=False)
+    monkeypatch.delenv("TRIAGE_EFFORT", raising=False)
