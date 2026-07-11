@@ -1,0 +1,18 @@
+{
+  "alert_id": "ms-1194000910188",
+  "severity": "HIGH",
+  "false_positive_probability": 0.18,
+  "confidence": 0.65,
+  "mitre_techniques": [
+    "T1566.002 - Phishing: Spearphishing Link"
+  ],
+  "key_evidence": [
+    "MS Defender explicitly categorized this as InitialAccess with MITRE technique T1566.002 (Spearphishing Link), indicating a malicious link delivered via email.",
+    "EntityType=MailMessage confirms an email-based delivery vector; a specific user account is referenced via AccountUpn, AccountSid, AccountObjectId, and AccountName fields.",
+    "Related evidence includes OAuthApplicationId and RegistryKey/RegistryValueName/RegistryValueData fields — suggesting possible post-click activity (e.g., OAuth consent phishing or malware persistence) beyond mere email receipt.",
+    "All IOC field values (Sha256, IpAddress, Url, FileName, DeviceId, AccountName, etc.) are internal numeric reference IDs, not resolved artifacts — actual hashes, URLs, and account identities cannot be determined from this export and must be retrieved from the Defender portal.",
+    "Alert fired at 01:36 UTC (approx. 22:36 local, outside business hours), which is outside normal working hours and warrants additional scrutiny."
+  ],
+  "summary": "MS Defender raised a confirmed InitialAccess alert tied to a spearphishing link (T1566.002) delivered via email to at least one internal user account. The presence of related evidence referencing OAuthApplicationId and registry artifacts alongside the mail message entity is a significant concern — it may indicate the link led to an OAuth consent grant or malware installation, elevating this above a simple phishing receipt. Critically, all IOC values in this alert export are unresolved internal numeric identifiers; a Tier 2 analyst must open this alert directly in the Microsoft Defender XDR/Sentinel portal to retrieve the actual account UPN, the URL clicked, the SHA256 hash, the device name, and any associated timeline events. Priority actions: identify the impacted user, revoke any suspicious OAuth grants, and review the device timeline for post-click activity.",
+  "recommended_action": "escalate_tier2"
+}

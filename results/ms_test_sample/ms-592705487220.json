@@ -1,0 +1,18 @@
+{
+  "alert_id": "ms-592705487220",
+  "severity": "HIGH",
+  "false_positive_probability": 0.25,
+  "confidence": 0.5,
+  "mitre_techniques": [
+    "T1190 - Exploit Public-Facing Application"
+  ],
+  "key_evidence": [
+    "MS Defender InitialAccess detector 83 (alert_title_id 61) fired with explicit MITRE mapping to T1190 — Exploit Public-Facing Application; this rule has zero prior firings in the last 7 days, ruling out a noisy/benign pattern.",
+    "Alert timestamp 03:46 UTC (~00:46 local time) falls well outside business hours, adding anomaly weight.",
+    "Raw log references multiple evidence entity types simultaneously: IP address, URL, account (SID, UPN, ObjectId, Name), device, registry key+value+data, filenames, folder paths, OAuth application — a breadth consistent with post-exploitation activity rather than a single probe.",
+    "All evidence field values are encoded as numeric reference IDs (e.g., IpAddress=18443, DeviceName=153085, AccountName=453297) rather than resolved human-readable values; the actual IP, device, account, and URL cannot be determined from this data alone, blocking IP reputation lookup and asset identification.",
+    "source_ip and dest_ip are null per documented source-profile behavior (not data corruption), but the inability to resolve the encoded evidence IDs constitutes materially incomplete data for autonomous triage."
+  ],
+  "summary": "MS Defender fired an InitialAccess / T1190 (Exploit Public-Facing Application) alert for the first time in 7 days at 03:46 UTC (outside business hours), with evidence spanning IP, URL, user account, registry, file system, and OAuth application entities — a breadth suggestive of active exploitation rather than a lone scan. All evidence field values are stored as numeric reference IDs (e.g., IpAddress=18443, DeviceId=98799) that are unresolvable without direct access to the Defender portal or its backing data store; this prevents confirming the affected asset, user, or remote IP. Tier 2 should immediately open the corresponding Defender incident (Detector 83, alert_title_id 61, DeviceId 98799) to resolve the encoded evidence, identify the targeted public-facing asset, and determine whether exploitation was successful. Registry and OAuth application indicators in the evidence set should be prioritized as potential persistence or credential-access artifacts.",
+  "recommended_action": "needs_more_data"
+}

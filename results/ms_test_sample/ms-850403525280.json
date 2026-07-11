@@ -1,0 +1,16 @@
+{
+  "alert_id": "ms-850403525280",
+  "severity": "HIGH",
+  "false_positive_probability": 0.3,
+  "confidence": 0.42,
+  "mitre_techniques": [],
+  "key_evidence": [
+    "Alert category is 'InitialAccess' from Microsoft Defender (detector MS-DETECTOR-4), a high-priority tactic indicating a potential first-foothold attempt.",
+    "Alert fired at 05:54 UTC (~02:54 local Santiago time), well outside business hours (08:00–19:00), adding contextual suspicion.",
+    "All evidence field values in the raw log are opaque numeric reference IDs (e.g., IpAddress=17, Sha256=138268, AccountName=453297), not resolvable threat indicators — the alert cannot be fully assessed from this payload alone.",
+    "No source or destination IP is present (documented as a source limitation, not corruption), preventing IP reputation or alert-history lookups.",
+    "Evidence fields reference an IP, URL, account, device, registry keys, file, and network message — suggesting a multi-artifact Defender alert, but specific artifact values are inaccessible without portal lookup."
+  ],
+  "summary": "A Microsoft Defender InitialAccess-category alert fired at approximately 03:00 local time (outside business hours), but every evidence field value in the payload is an internal numeric reference ID rather than an actual indicator — making this alert unactionable as delivered. The Tier 2 analyst must open alert 'ms-850403525280' directly in the Microsoft Defender portal to retrieve the real device name, account UPN, IP address, file hash, URL, and registry artifacts. InitialAccess is a high-priority MITRE tactic (potential first foothold), so this must not be dismissed without full context from the portal; pay particular attention to the referenced account and device, and cross-check whether the affected asset is in a critical subnet (10.0.1.0/24 or 10.0.2.0/24).",
+  "recommended_action": "needs_more_data"
+}

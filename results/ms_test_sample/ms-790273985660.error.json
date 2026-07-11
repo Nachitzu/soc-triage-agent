@@ -1,0 +1,4 @@
+{
+  "alert_id": "ms-790273985660",
+  "error": "model set stop_reason=tool_use but produced no tool_use blocks"
+}

@@ -1,0 +1,20 @@
+{
+  "alert_id": "ms-1288490193627",
+  "severity": "HIGH",
+  "false_positive_probability": 0.18,
+  "confidence": 0.72,
+  "mitre_techniques": [
+    "T1078 - Valid Accounts",
+    "T1098 - Account Manipulation",
+    "T1112 - Modify Registry"
+  ],
+  "key_evidence": [
+    "Microsoft Defender Persistence-category alert with MITRE techniques T1078 and T1098 explicitly identified by the detector.",
+    "Registry key, registry value name, and registry value data all present in evidence — consistent with registry-based persistence (T1112).",
+    "OAuth application ID included in evidence, raising concern for OAuth app abuse as a persistence vector.",
+    "EntityType=User / EvidenceRole=Impacted: a user account is directly involved in or targeted by this activity.",
+    "Alert fired at ~03:36 AM local time (Santiago), well outside business hours — anomalous for legitimate user activity."
+  ],
+  "summary": "Microsoft Defender raised a high-confidence Persistence alert on a user entity at 03:36 AM local time, mapping to Valid Accounts (T1078) and Account Manipulation (T1098) with supporting registry modification artifacts and an OAuth application reference. This combination — off-hours timing, account-level manipulation, registry changes, and OAuth app involvement — is consistent with an attacker establishing persistent access after initial compromise of a user account. Tier 2 should immediately resolve the anonymized field IDs (AccountUpn, DeviceName, OAuthApplicationId) in the Defender portal, review the account's recent sign-in history and OAuth grants, inspect the specific registry key and value for known persistence entries (e.g., Run/RunOnce keys), and determine whether the account shows any signs of prior credential theft.",
+  "recommended_action": "escalate_tier2"
+}

@@ -1,0 +1,19 @@
+{
+  "alert_id": "ms-1322849930226",
+  "severity": "HIGH",
+  "false_positive_probability": 0.3,
+  "confidence": 0.65,
+  "mitre_techniques": [
+    "T1078 - Valid Accounts",
+    "T1078.004 - Valid Accounts: Cloud Accounts"
+  ],
+  "key_evidence": [
+    "MS Defender independently categorized this alert as InitialAccess and mapped it to T1078/T1078.004 (Valid Accounts: Cloud Accounts), indicating suspected cloud credential abuse",
+    "Triggering entity type is CloudLogonSession — a cloud authentication event, not a local endpoint action",
+    "OAuthApplicationId field is populated, suggesting an OAuth application or token was involved in the logon flow, raising concern for token theft or illicit consent grant",
+    "Usage=Public flag indicates the logon originated from a public network, which may be anomalous for the affected account",
+    "All identifying fields (AccountUpn, AccountName, DeviceName, CountryCode, etc.) are internal Defender reference IDs — actual account identity and geolocation must be resolved in the Defender/Entra portal before full risk assessment is possible"
+  ],
+  "summary": "Microsoft Defender fired an InitialAccess alert for a CloudLogonSession mapped to T1078.004 (Valid Accounts: Cloud Accounts), indicating a potentially compromised or anomalous cloud credential use — this is a high-signal technique commonly associated with account takeover. The presence of an OAuthApplicationId and a public-network usage flag raises additional concern for OAuth token abuse or an illicit consent grant. Confidence is moderate because all entity-identifying field values are Defender-internal reference IDs that must be resolved in the Defender/Entra portal to confirm the account, geography, and device involved. Tier 2 should immediately open the alert in the Defender portal to identify the affected account UPN and sign-in location, check Entra ID sign-in logs and conditional access outcomes for the same session, audit OAuth application permissions granted, and determine whether any downstream activity (mailbox access, file access, lateral movement) followed this logon.",
+  "recommended_action": "escalate_tier2"
+}

@@ -1,0 +1,16 @@
+{
+  "alert_id": "ms-1099511629378",
+  "severity": "MEDIUM",
+  "false_positive_probability": 0.25,
+  "confidence": 0.35,
+  "mitre_techniques": [],
+  "key_evidence": [
+    "Every evidence field value is a numeric integer rather than real data (e.g., Sha256=138268, IpAddress=360606, AccountUpn=673934, FileName=2020, FolderPath=0) — these are likely database reference IDs, not actual artifact values, making the alert untriageable as received.",
+    "Alert structure references six distinct evidence entity types simultaneously: File, Registry (Key/ValueName/ValueData), Account, Network (URL, IP), Email (NetworkMessageId), and OAuth Application — breadth of evidence types is atypical and warrants investigation if real values are retrieved.",
+    "Rule MS-DETECTOR-270 has zero prior firings in the last 7 days; this is not a known-noisy rule, increasing the signal weight of this single firing.",
+    "Alert timestamp 2024-06-09T21:06:40Z falls outside business hours (UTC-4 ≈ 17:06 local, borderline end-of-day) but device/account context cannot be validated without real field values.",
+    "source_ip and dest_ip are null per documented source-profile behavior, not corruption; however IpAddress=360606 inside the log is itself malformed and cannot be resolved or reputation-checked."
+  ],
+  "summary": "This MS Defender SuspiciousActivity alert (Detector 270) cannot be meaningfully triaged because all evidence field values are numeric reference IDs rather than actual artifacts — file hashes, IP addresses, account names, file paths, and registry data are all integers (e.g., Sha256=138268, IpAddress=360606). The structural breadth of evidence types (file, registry, account, OAuth, email, network) is notable and would, if real, suggest a complex multi-stage event possibly involving persistence (registry) and credential/token abuse (OAuth). This rule has never fired before in the 7-day window, so it is not a known-noisy signature. A Tier 2 analyst must open the alert directly in the Microsoft Defender portal using DeviceId=98799 and alert_title_id=258 to retrieve the actual artifact values before any severity or MITRE mapping can be confirmed.",
+  "recommended_action": "needs_more_data"
+}

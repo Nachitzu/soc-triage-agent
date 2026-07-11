@@ -1,0 +1,18 @@
+{
+  "alert_id": "ms-601295424377",
+  "severity": "MEDIUM",
+  "false_positive_probability": 0.35,
+  "confidence": 0.65,
+  "mitre_techniques": [
+    "T1566.002 - Phishing: Spearphishing Link"
+  ],
+  "key_evidence": [
+    "MS Defender categorized this as InitialAccess with explicitly mapped MITRE technique T1566.002 (Spearphishing Link), indicating a suspicious link delivered via email.",
+    "EntityType=Mailbox with EvidenceRole=Impacted: the email reached the target mailbox — delivery was not blocked.",
+    "LastVerdict=NoThreatsFound: Defender's verdict at alert time shows no confirmed malicious execution or payload detonation, tempering severity but not ruling out a delivered phishing link awaiting user interaction.",
+    "Evidence artifact fields (Sha256, IpAddress, Url, FileName, etc.) contain only numeric internal reference IDs — no raw hash strings, URLs, or sender addresses are present in this payload, which materially limits immediate IOC pivoting.",
+    "NetworkMessageId=529644 is present and serves as the primary pivot key to retrieve full email metadata from the Defender/M365 portal."
+  ],
+  "summary": "Microsoft Defender flagged an InitialAccess event mapped to T1566.002 (Spearphishing Link) against a corporate mailbox that received the email (EvidenceRole=Impacted). The last verdict is NoThreatsFound, meaning no confirmed execution or detonation occurred at alert time — however, a delivered phishing link still represents an open risk if the recipient clicks it before remediation. Critically, all evidence artifact fields (URL, hash, sender, filename) are surfaced only as internal numeric reference IDs in this alert payload; a Tier 2 analyst must pull the full incident from the Microsoft 365 Defender portal using NetworkMessageId=529644 to obtain the actual URL, sender address, and delivery path. Recommended first steps: retrieve the real URL and assess Safe Links coverage, check the impacted mailbox account (AccountSid=441377) for post-delivery sign-in anomalies or suspicious inbox rules, and soft-delete or quarantine the message if the URL scores malicious.",
+  "recommended_action": "escalate_tier2"
+}

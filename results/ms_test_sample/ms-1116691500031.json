@@ -1,0 +1,19 @@
+{
+  "alert_id": "ms-1116691500031",
+  "severity": "HIGH",
+  "false_positive_probability": 0.25,
+  "confidence": 0.4,
+  "mitre_techniques": [
+    "T1071 - Application Layer Protocol",
+    "T1112 - Modify Registry"
+  ],
+  "key_evidence": [
+    "Microsoft Defender categorized the alert as 'CommandAndControl' with SuspicionLevel=Suspicious and LastVerdict=Suspicious — a Defender C2 verdict, even at the 'Suspicious' tier, warrants urgent review.",
+    "Evidence bundle includes EntityType=Url, RegistryKey/ValueName/ValueData, FileName/FolderPath, AccountSid/AccountUpn/AccountName, and NetworkMessageId — multiple evidence types spanning network, file-system, registry, and identity layers, consistent with a staged compromise.",
+    "NetworkMessageId is present, suggesting a possible email-delivered initial access vector feeding this C2 activity.",
+    "All evidence field values are internal numeric tokens (e.g., Sha256=138268, Url=4, IpAddress=360606) rather than actual observables — the alert has been delivered without its evidence payload resolved, making the URL, hash, affected device name, and account UPN unreadable from this alert alone.",
+    "Timestamp 2024-06-11T18:16:59Z falls within business hours (~14:16–15:16 local time), ruling out the nightly scanner or backup job as a benign explanation."
+  ],
+  "summary": "Microsoft Defender raised a CommandAndControl alert with 'Suspicious' verdict on device ID 98799, involving a URL, registry modifications, a file, and an associated user account — a combination consistent with a post-delivery C2 implant establishing persistence. CRITICAL DATA QUALITY ISSUE: every evidence field value has been delivered as an internal numeric token (e.g., 'Url=4', 'Sha256=138268', 'IpAddress=360606') rather than an actual observable; it is impossible to look up reputation, query SIEM history, or scope the incident without the real values. The Tier 2 analyst must immediately pull the raw incident from the Microsoft Defender portal using alert_title_id=2 / DeviceId=98799, resolve the URL, SHA256, account UPN, and IP address, and determine whether any lateral movement from the affected device has occurred.",
+  "recommended_action": "needs_more_data"
+}

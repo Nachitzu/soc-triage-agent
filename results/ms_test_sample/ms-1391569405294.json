@@ -1,0 +1,18 @@
+{
+  "alert_id": "ms-1391569405294",
+  "severity": "MEDIUM",
+  "false_positive_probability": 0.35,
+  "confidence": 0.4,
+  "mitre_techniques": [
+    "T1566 - Phishing"
+  ],
+  "key_evidence": [
+    "MS Defender classified this as category InitialAccess with MITRE technique T1566 (Phishing) — a potentially serious initial-access vector",
+    "LastVerdict=NoThreatsFound: Defender's automated verdict found no active threat at time of alert, reducing — but not eliminating — urgency",
+    "All evidence field values are tokenized numeric reference IDs (e.g., IpAddress=18340, Sha256=138268, AccountUpn=673934, Url=160396); no actual IOCs are readable from this alert payload",
+    "NetworkMessageId, AccountName, DeviceName, FileName, and RegistryKey fields are present but equally opaque — a phishing email artifact and an affected user/device are implied but unverifiable",
+    "No prior firings of rule MS-DETECTOR-6 in the last 7 days, so this cannot be dismissed as a known-noisy rule"
+  ],
+  "summary": "Microsoft Defender fired an InitialAccess/Phishing (T1566) alert against device ID 98799, but all evidence field values are tokenized numeric IDs — no real IP address, file hash, account name, URL, or network message ID can be read or investigated from this alert alone. The automated verdict (LastVerdict=NoThreatsFound) provides limited reassurance, as Defender can still surface phishing signals where the payload was not definitively classified as malicious. A Tier 2 analyst should retrieve the fully decoded alert from the Microsoft Defender portal using alert_title_id 5 and DeviceId 98799, extract the actual NetworkMessageId and AccountUpn to determine whether a phishing email was delivered to a mailbox, and confirm whether any user interaction or follow-on activity occurred.",
+  "recommended_action": "needs_more_data"
+}

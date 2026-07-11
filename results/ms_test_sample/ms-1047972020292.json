@@ -1,0 +1,19 @@
+{
+  "alert_id": "ms-1047972020292",
+  "severity": "HIGH",
+  "false_positive_probability": 0.12,
+  "confidence": 0.65,
+  "mitre_techniques": [
+    "T1110 - Brute Force",
+    "T1078 - Valid Accounts"
+  ],
+  "key_evidence": [
+    "MS Defender CredentialAccess category alert (detector 277) explicitly maps to both T1110 and T1078 — the pairing strongly implies a brute-force attempt that progressed to valid-account use, i.e., likely successful credential compromise.",
+    "Evidence artifacts span seven distinct entity types: IP, Account (SID, UPN, ObjectId, Name), Device, RegistryKey/Value, File/FolderPath, URL, OAuth Application, and NetworkMessageId — indicating broad, multi-stage activity rather than a single noisy event.",
+    "Presence of OAuthApplicationId and NetworkMessageId raises concern for a phishing-to-OAuth-consent-grant attack chain (adversary-in-the-middle or illicit consent grant), which would produce exactly this combination of evidence types.",
+    "RegistryKey + RegistryValueName + RegistryValueData artifacts suggest possible persistence mechanisms were written to disk on the affected device (DeviceId=98799).",
+    "All field values in the raw log are numeric reference IDs rather than human-readable strings, meaning the true account names, device names, file paths, and IP addresses are only resolvable from the originating MS Defender / Sentinel portal — full enrichment is blocked at this tier."
+  ],
+  "summary": "MS Defender fired a high-confidence CredentialAccess alert simultaneously tagging T1110 (Brute Force) and T1078 (Valid Accounts), which together are a strong indicator that credential compromise succeeded and the attacker pivoted to using a legitimate account. The breadth of evidence — account objects, device, registry writes, a file artifact, an OAuth application, a network message ID, and a URL — suggests a multi-stage attack (plausible chain: phishing email → OAuth consent abuse or credential theft → registry persistence on DeviceId 98799). Because all field values are opaque numeric reference IDs, Tier 2 must open alert ms-1047972020292 / detector 277 directly in the MS Defender/Sentinel portal to recover the real account UPNs, device name, registry key written, and OAuth application name; immediate priorities are disabling the compromised account, revoking OAuth grants, and reviewing registry run-keys or scheduled tasks on the affected host.",
+  "recommended_action": "escalate_tier2"
+}

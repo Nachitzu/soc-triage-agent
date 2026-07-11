@@ -1,0 +1,18 @@
+{
+  "alert_id": "ms-266287973858",
+  "severity": "HIGH",
+  "false_positive_probability": 0.2,
+  "confidence": 0.62,
+  "mitre_techniques": [
+    "T1566 - Phishing"
+  ],
+  "key_evidence": [
+    "MS Defender categorized this as InitialAccess with explicit MITRE mapping T1566 (Phishing), indicating a detected phishing attempt against a corporate mailbox.",
+    "EntityType=MailMessage confirms a suspicious email is central to the alert; NetworkMessageId and AccountUpn reference IDs are present and can be resolved in the Defender portal for full details.",
+    "Evidence bundle includes RegistryKey, RegistryValueName, and RegistryValueData reference IDs alongside the mail message — suggesting Defender may have correlated post-delivery payload execution activity, not just mail receipt.",
+    "FileName and FolderPath reference IDs also present, further indicating possible file-drop activity associated with this phishing event.",
+    "All artifact fields (Sha256, IpAddress, Url, AccountUpn, DeviceName, etc.) are stored as opaque numeric reference IDs in the raw log — actual values must be resolved via the Microsoft Defender portal using the provided IDs before impact can be confirmed."
+  ],
+  "summary": "Microsoft Defender fired an InitialAccess/T1566 (Phishing) alert for a mail message associated with a specific user account and device, and the evidence bundle contains correlated registry and file-system artifacts — a strong indicator that Defender linked post-delivery execution activity to this phishing email, not just the email itself. All artifact values are opaque Defender-internal numeric IDs (e.g., Sha256=138268, IpAddress=360606) and must be resolved in the Defender portal using the NetworkMessageId, AccountUpn, DeviceId, and Sha256 reference IDs to determine the actual user, device, email content, and whether any payload ran successfully. Given the registry artifact correlation, this should be treated as a potentially successful phishing delivery until proven otherwise. Tier 2 should immediately pivot into the Defender incident timeline to confirm whether the registry/file artifacts represent actual execution and whether lateral movement or credential access followed.",
+  "recommended_action": "escalate_tier2"
+}

@@ -1,0 +1,18 @@
+{
+  "alert_id": "ms-1254130454238",
+  "severity": "HIGH",
+  "false_positive_probability": 0.25,
+  "confidence": 0.62,
+  "mitre_techniques": [
+    "T1071 - Application Layer Protocol"
+  ],
+  "key_evidence": [
+    "Microsoft Defender classified this alert under category 'CommandAndControl' — a high-fidelity Defender category with a low baseline false-positive rate.",
+    "SuspicionLevel=Suspicious and LastVerdict=Suspicious: verdict is elevated but not yet 'Malicious' or 'Confirmed', introducing some uncertainty.",
+    "EntityType=Machine, EvidenceRole=Impacted: a device is identified as the impacted entity, not merely as context.",
+    "All forensic identifiers in the raw log (DeviceName=17733, Sha256=138268, IpAddress=360606, AccountName=453297) are Defender internal reference IDs, not readable values — actionable specifics require portal pivot.",
+    "Null source_ip and dest_ip are expected per source profile and do not indicate alert corruption; however, they prevent network-level corroboration from this record alone."
+  ],
+  "summary": "Microsoft Defender fired a Command and Control alert (Suspicious verdict) against an internal machine (DeviceId 10994). The raw log fields carry Defender internal reference IDs rather than human-readable values, so the actual device hostname, file hash, network endpoints, and user account cannot be assessed from this record alone. A Tier 2 analyst should immediately pivot to the Microsoft Defender XDR portal using DeviceId 10994 and alert_title_id 2 to retrieve the full incident graph, including the actual device name, connected external IPs, involved file hashes, and the triggering process tree. Priority is to determine whether an active C2 channel has been established and to isolate the device if confirmed.",
+  "recommended_action": "escalate_tier2"
+}

@@ -1,0 +1,26 @@
+{
+  "alert_id": "ms-1176821040568",
+  "severity": "HIGH",
+  "false_positive_probability": 0.18,
+  "confidence": 0.7,
+  "mitre_techniques": [
+    "T1007 - System Service Discovery",
+    "T1010 - Application Window Discovery",
+    "T1016 - System Network Configuration Discovery",
+    "T1018 - Remote System Discovery",
+    "T1049 - System Network Connections Discovery",
+    "T1059.001 - Command and Scripting Interpreter: PowerShell",
+    "T1087 - Account Discovery",
+    "T1135 - Network Share Discovery",
+    "T1518 - Software Discovery"
+  ],
+  "key_evidence": [
+    "Nine distinct MITRE ATT&CK discovery techniques fired simultaneously on a single device (DeviceId 98799), indicating broad, systematic reconnaissance rather than an isolated probe.",
+    "T1059.001 (PowerShell) is present alongside the discovery cluster — a strong indicator that scripted enumeration, not passive observation, is occurring.",
+    "T1087 (Account Discovery) and T1135 (Network Share Discovery) are particularly high-risk in a corporate environment as they directly support lateral movement preparation.",
+    "Timestamp 2024-06-05T00:56:44Z equals approximately 20:56 local time (Santiago, UTC-4 in June) — outside documented business hours (08:00–19:00), with no known benign after-hours pattern that covers a discovery sweep of this scope.",
+    "MS Defender assigned both SuspicionLevel=Suspicious and LastVerdict=Suspicious; all alert field values are tokenized internal identifiers, meaning enriched context (actual hostname, username, process name, hash) must be retrieved from the Defender portal."
+  ],
+  "summary": "MS Defender detected broad, scripted discovery activity on device ID 98799 at 20:56 local time (outside business hours), spanning nine MITRE techniques including PowerShell execution, account enumeration, network share discovery, and remote system discovery — a pattern strongly consistent with post-compromise reconnaissance. No single technique in isolation would be alarming, but their simultaneous co-occurrence with PowerShell elevates this well above routine IT activity or scanner noise. The alert fields are tokenized (e.g., Sha256=25, AccountName=453297), so the Tier 2 analyst must pull the enriched incident from the Microsoft Defender portal using DeviceId 98799 to obtain the actual process tree, user account, and script content. Priority checks: identify the process that spawned the discovery commands, confirm whether the associated user account shows anomalous login patterns, and determine whether any of the enumerated network shares or remote systems fall within the 10.0.1.0/24 or 10.0.2.0/24 critical asset ranges.",
+  "recommended_action": "escalate_tier2"
+}

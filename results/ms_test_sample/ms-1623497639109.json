@@ -1,0 +1,20 @@
+{
+  "alert_id": "ms-1623497639109",
+  "severity": "HIGH",
+  "false_positive_probability": 0.2,
+  "confidence": 0.52,
+  "mitre_techniques": [
+    "T1048 - Exfiltration Over Alternative Protocol",
+    "T1567 - Exfiltration Over Web Service",
+    "T1528 - Steal Application Access Token"
+  ],
+  "key_evidence": [
+    "Microsoft Defender detector 55 fired with category 'Exfiltration' — a high-fidelity, purpose-built detection engine; first firing of this rule in the past 7 days, eliminating the noisy-rule explanation.",
+    "Evidence includes OAuthApplicationId (ID 881) alongside AccountUpn, AccountSid, and AccountObjectId fields — strongly suggests an OAuth application is the suspected exfiltration vector, consistent with T1528/T1567.",
+    "NetworkMessageId (ID 529644) and Url (ID 160396) are both present, indicating email or web-based data movement may be involved.",
+    "Usage=Public field in evidence suggests data may have been transferred to or exposed on a public endpoint.",
+    "All evidence field values are encoded as opaque numeric IDs (e.g., Sha256=138268, DeviceName=153085, FileName=289573) — these are Defender portal entity references, not readable values; actual account, device, file, and destination cannot be assessed from this log alone."
+  ],
+  "summary": "Microsoft Defender has raised a first-time Exfiltration alert (detector 55, alert-title 37) implicating a specific user account and an OAuth application, with indicators of public-endpoint data exposure. This rule has never fired in the past 7 days, making a noisy false-positive unlikely. However, all evidence field values are Defender portal entity IDs, not human-readable data — the affected account, device name, file path, destination URL, and SHA-256 cannot be evaluated from the raw log. A Tier 2 analyst must open the Defender portal (security.microsoft.com → Incidents/Alerts → alert ms-1623497639109) to decode entity IDs, identify the impacted user account and device, review recently authorized OAuth applications on that account, and determine whether data left the environment.",
+  "recommended_action": "needs_more_data"
+}
