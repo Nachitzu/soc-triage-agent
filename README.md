@@ -22,7 +22,7 @@ This project automates that loop. It ingests SIEM alerts, classifies severity, e
 
 > **Design principle** — the agent *augments* the analyst, it does not replace human judgment. Low-confidence assessments are always escalated, never auto-closed. This rule is enforced by the output schema, not by convention.
 
-**Author:** Aaron — AI Security Engineer, Blue Team + AI agent architecture.
+**Author:** Nachitzu — AI Security Engineer, Blue Team + AI agent architecture.
 
 ---
 
