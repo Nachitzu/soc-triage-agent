@@ -28,6 +28,7 @@ dev = [
 
 [project.scripts]
 soc-triage = "src.agent.triage_agent:main"
+soc-tool = "src.agent.toolcli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]

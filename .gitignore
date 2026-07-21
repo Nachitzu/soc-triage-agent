@@ -8,6 +8,7 @@ dataset/
 # Agent outputs
 results/
 reports/
+scratch/
 
 # Local SQLite store (alert history + IP reputation cache)
 *.db
@@ -24,4 +25,7 @@ htmlcov/
 
 # Notebooks
 .ipynb_checkpoints/
-/.claude
+
+# Claude Code: keep the shared slash-commands, ignore local settings/state
+/.claude/*
+!/.claude/commands/
