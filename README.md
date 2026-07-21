@@ -12,6 +12,8 @@
   <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
+<p align="center">English · <a href="README.es.md">Español</a></p>
+
 ---
 
 ## Overview
@@ -86,6 +88,22 @@ Run the test suite:
 ```bash
 pytest --cov=src
 ```
+
+### Run in the Claude Code console (no API key)
+
+Besides API mode (above, needs `ANTHROPIC_API_KEY`), you can triage **inside the
+[Claude Code](https://claude.com/claude-code) console with no API key** — the live
+session is the analyst, and Python does only the deterministic work (enrichment tools,
+`TriageOutput` validation, HTML report) through `soc-tool`:
+
+```
+/triage data/samples/a-2941.json
+```
+
+The session follows the same verbatim `src/agent/prompts/SYSTEM_PROMPT.md`, calls
+`soc-tool validate` to enforce the contract (low confidence can't close an alert;
+`block_and_escalate` needs CRITICAL + confidence ≥ 0.8), and enriches offline via
+`soc-tool tool …`. The slash-command lives in `.claude/commands/triage.md`.
 
 ---
 
